@@ -19,7 +19,6 @@ class _YoloVideoState extends State<YoloVideo> {
   CameraImage? cameraImage;
   bool isLoaded = false;
   bool isDetecting = false;
-  double confidenceThreshold = 0.5;
 
   @override
   void initState() {
@@ -27,7 +26,7 @@ class _YoloVideoState extends State<YoloVideo> {
     init();
   }
 
-  init() async {
+  Future<void> init() async {
     camerass = await availableCameras();
     vision = FlutterVision();
     controller = CameraController(camerass[0], ResolutionPreset.high);
@@ -43,7 +42,7 @@ class _YoloVideoState extends State<YoloVideo> {
   Future<void> loadYoloModel() async {
     await vision.loadYoloModel(
       labels: 'assets/potholes.txt',
-      modelPath: 'assets/best_float16.tflite',
+      modelPath: 'assets/yolov8.tflite',
       modelVersion: "yolov8",
       numThreads: 1,
       useGpu: true,
@@ -55,9 +54,9 @@ class _YoloVideoState extends State<YoloVideo> {
       bytesList: image.planes.map((plane) => plane.bytes).toList(),
       imageHeight: image.height,
       imageWidth: image.width,
-      iouThreshold: 0.3,
-      confThreshold: 0.3,
-      classThreshold: 0.3,
+      iouThreshold: 0.5,
+      confThreshold: 0.5, // You can tune this
+      classThreshold: 0.5,
     );
     if (result.isNotEmpty) {
       setState(() {
@@ -88,12 +87,10 @@ class _YoloVideoState extends State<YoloVideo> {
   }
 
   List<Widget> displayBoxesAroundRecognizedObjects(Size screen) {
-    if (yoloResults.isEmpty) return [];
+    if (yoloResults.isEmpty || cameraImage == null) return [];
 
-    double factorX = screen.width / (cameraImage?.height ?? 1);
-    double factorY = screen.height / (cameraImage?.width ?? 1);
-
-    Color colorPick = const Color.fromARGB(255, 50, 233, 30);
+    double factorX = screen.width / cameraImage!.height;
+    double factorY = screen.height / cameraImage!.width;
 
     return yoloResults.map((result) {
       double x = result["box"][0] * factorX;
@@ -109,12 +106,12 @@ class _YoloVideoState extends State<YoloVideo> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.pink, width: 2),
+            border: Border.all(color: Colors.greenAccent, width: 2),
           ),
           child: Text(
             "${result['tag']} ${(result['box'][4] * 100).toStringAsFixed(0)}%",
             style: TextStyle(
-              background: Paint()..color = colorPick,
+              backgroundColor: Colors.greenAccent,
               color: Colors.black,
               fontSize: 16.0,
             ),
@@ -125,9 +122,9 @@ class _YoloVideoState extends State<YoloVideo> {
   }
 
   @override
-  void dispose() async {
+  void dispose() {
     controller.dispose();
-    await vision.closeYoloModel();
+    vision.closeYoloModel();
     super.dispose();
   }
 
@@ -138,7 +135,7 @@ class _YoloVideoState extends State<YoloVideo> {
     if (!isLoaded) {
       return const Scaffold(
         body: Center(
-          child: Text("Model not loaded, waiting for it"),
+          child: Text("Loading model, please wait..."),
         ),
       );
     }
@@ -155,27 +152,22 @@ class _YoloVideoState extends State<YoloVideo> {
           Positioned(
             bottom: 75,
             width: MediaQuery.of(context).size.width,
-            child: Container(
-              height: 80,
-              width: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  width: 5,
-                  color: Colors.white,
-                  style: BorderStyle.solid,
+            child: Center(
+              child: Container(
+                height: 80,
+                width: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(width: 5, color: Colors.white),
                 ),
-              ),
-              child: isDetecting
-                  ? IconButton(
-                onPressed: stopDetection,
-                icon: const Icon(Icons.stop, color: Colors.red),
-                iconSize: 50,
-              )
-                  : IconButton(
-                onPressed: startDetection,
-                icon: const Icon(Icons.play_arrow, color: Colors.white),
-                iconSize: 50,
+                child: IconButton(
+                  onPressed: isDetecting ? stopDetection : startDetection,
+                  icon: Icon(
+                    isDetecting ? Icons.stop : Icons.play_arrow,
+                    color: isDetecting ? Colors.red : Colors.white,
+                    size: 50,
+                  ),
+                ),
               ),
             ),
           ),
