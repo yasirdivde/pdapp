@@ -9,10 +9,12 @@ android {
     namespace = "com.example.pdapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+
     aaptOptions {
-        noCompress 'tflite'
-        noCompress 'lite'
+        // Corrected noCompress syntax for Kotlin DSL
+        noCompress("tflite", "lite") // Pass extensions as comma-separated values inside parentheses
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -23,10 +25,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.pdapp"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 23
         targetSdk = 34
         versionCode = flutter.versionCode
@@ -35,8 +34,6 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
